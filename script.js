@@ -57,3 +57,19 @@ window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 });
+function mostrarOpciones() {
+  document.getElementById("misOpciones").classList.toggle("mostrar");
+}
+
+// Cierra el menú si el usuario hace clic en cualquier otro lado
+window.addEventListener('click', function(event) {
+  if (!event.target.matches('.boton-menu')) {
+    const menus = document.getElementsByClassName("contenido-menu");
+    for (let i = 0; i < menus.length; i++) {
+      const menuAbierto = menus[i];
+      if (menuAbierto.classList.contains('mostrar')) {
+        menuAbierto.classList.remove('mostrar');
+      }
+    }
+  }
+});
