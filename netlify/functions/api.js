@@ -10,15 +10,20 @@ const router = express.Router();
 
 app.use(express.json());
 
-// Helper para conectar al almacén de Blobs
+// Helper para conectar a Netlify Blobs de forma compatible
 function obtenerAlmacenMetricas() {
-  return getStore('funnel-metrics');
+  return getStore({
+    name: 'funnel-metrics',
+    consistency: 'strong'
+  });
 }
 
-// Endpoint 1: Registrar evento (POST /api/metrics)
+// -------------------------------------------------------------
+// Endpoint 1: Registrar evento en el funnel (POST /api/metrics)
+// -------------------------------------------------------------
 router.post('/metrics', async (req, res) => {
   try {
-    const { step, source, sessionId, metadata } = req.body || {};
+    const { step, source, sessionId, metadata } = req.body;
 
     if (!step || !source) {
       return res.status(400).json({
@@ -58,19 +63,34 @@ router.post('/metrics', async (req, res) => {
   }
 });
 
-// Endpoint 2: Consultar métricas (GET /api/metrics)
+// -------------------------------------------------------------
+// Endpoint 2: Consultar y resumir métricas + RETO 1 (GET /api/metrics)
+// -------------------------------------------------------------
 router.get('/metrics', async (req, res) => {
   try {
+    const { step: filterStep, source: filterSource } = req.query;
     const store = obtenerAlmacenMetricas();
     const { blobs } = await store.list();
 
     const eventos = await Promise.all(
-      (blobs || []).slice(0, 50).map(async (blob) => {
+      blobs.slice(0, 50).map(async (blob) => {
         return await store.get(blob.key, { type: 'json' });
       })
     );
 
-    const eventosValidos = eventos.filter(Boolean);
+    let eventosValidos = eventos.filter(Boolean);
+
+    // Reto 1: Filtrado por Query Parameters
+    if (filterStep) {
+      eventosValidos = eventosValidos.filter(
+        (e) => e.step === String(filterStep).toLowerCase().trim()
+      );
+    }
+    if (filterSource) {
+      eventosValidos = eventosValidos.filter(
+        (e) => e.source === String(filterSource).toLowerCase().trim()
+      );
+    }
 
     const summary = {
       totalEvents: eventosValidos.length,
@@ -100,6 +120,61 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+// RETO 3: Exportación de Métricas a CSV (GET /api/metrics/export)
+// -------------------------------------------------------------
+router.get('/metrics/export', async (req, res) => {
+  try {
+    const { format } = req.query;
+    if (format !== 'csv') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Formato no soportado. Usa ?format=csv'
+      });
+    }
+
+    const store = obtenerAlmacenMetricas();
+    const { blobs } = await store.list();
+
+    const eventos = await Promise.all(
+      blobs.map(async (blob) => await store.get(blob.key, { type: 'json' }))
+    );
+
+    const eventosValidos = eventos.filter(Boolean);
+
+    const headers = ['id', 'step', 'source', 'sessionId', 'timestamp'];
+    const csvRows = [headers.join(',')];
+
+    for (const ev of eventosValidos) {
+      const row = [
+        ev.id,
+        ev.step,
+        ev.source,
+        ev.sessionId,
+        ev.timestamp
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="metricas_funnel.csv"');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    console.error('Error al exportar CSV:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error al generar la exportación en CSV.'
+    });
+  }
+});
+
+// Montar el router en /api
 app.use('/api', router);
 
-export const handler = serverless(app);
+// EXPORTACIÓN COMPATIBLE SERVERLESS
+const serverlessHandler = serverless(app);
+export const handler = async (event, context) => {
+  return await serverlessHandler(event, context);
+};
