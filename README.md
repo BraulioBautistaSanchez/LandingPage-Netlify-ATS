@@ -1,5 +1,5 @@
 Link de la página https://afterthestormats.netlify.app 
-## 6. Respuestas a Preguntas Teóricas de Reflexión Arquitectónica
+
 
 ### 1. Persistencia vs. Estado Efímero
 Las funciones serverless operan bajo la filosofía *stateless*: la infraestructura crea contenedores de forma bajo demanda que se destruyen tras tiempos de inactividad (*cold starts* y *freezes*). Cualquier variable global en memoria (ej. `let contador = 0`) se pierde por completo entre instancias. 
