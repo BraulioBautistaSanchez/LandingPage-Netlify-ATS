@@ -12,20 +12,14 @@ app.use(express.json());
 
 // Helper para conectar al almacén de Blobs
 function obtenerAlmacenMetricas() {
-  return getStore({
-    name: 'funnel-metrics',
-    consistency: 'strong'
-  });
+  return getStore('funnel-metrics');
 }
 
-// -------------------------------------------------------------
-// Endpoint 1: Registrar evento en el funnel (POST /api/metrics)
-// -------------------------------------------------------------
+// Endpoint 1: Registrar evento (POST /api/metrics)
 router.post('/metrics', async (req, res) => {
   try {
-    const { step, source, sessionId, metadata } = req.body;
+    const { step, source, sessionId, metadata } = req.body || {};
 
-    // 1. Validación defensiva mínima
     if (!step || !source) {
       return res.status(400).json({
         status: 'error',
@@ -33,7 +27,6 @@ router.post('/metrics', async (req, res) => {
       });
     }
 
-    // 2. Construir el objeto de telemetría
     const randomSuffix = Math.random().toString(36).substring(2, 7);
     const eventId = `metric_${Date.now()}_${randomSuffix}`;
     const timestamp = new Date().toISOString();
@@ -47,7 +40,6 @@ router.post('/metrics', async (req, res) => {
       timestamp
     };
 
-    // 3. Persistir en Netlify Blobs
     const store = obtenerAlmacenMetricas();
     await store.setJSON(eventId, metricRecord);
 
@@ -66,26 +58,22 @@ router.post('/metrics', async (req, res) => {
   }
 });
 
-// -------------------------------------------------------------
-// Endpoint 2: Consultar y resumir métricas (GET /api/metrics)
-// -------------------------------------------------------------
+// Endpoint 2: Consultar métricas (GET /api/metrics)
 router.get('/metrics', async (req, res) => {
   try {
     const store = obtenerAlmacenMetricas();
     const { blobs } = await store.list();
 
-    // Obtener el contenido de los últimos eventos (hasta un máximo de 50)
-    const eventosRecientes = await Promise.all(
-      blobs.slice(0, 50).map(async (blob) => {
+    const eventos = await Promise.all(
+      (blobs || []).slice(0, 50).map(async (blob) => {
         return await store.get(blob.key, { type: 'json' });
       })
     );
 
-    // Filtrar posibles nulos y calcular agregaciones
-    const eventosValidos = eventosRecientes.filter(Boolean);
+    const eventosValidos = eventos.filter(Boolean);
 
     const summary = {
-      totalEvents: blobs.length,
+      totalEvents: eventosValidos.length,
       byStep: {},
       bySource: {}
     };
@@ -112,8 +100,6 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
-// Vincular router al prefijo /api
 app.use('/api', router);
 
-// Exportar handler para Netlify Functions
 export const handler = serverless(app);
