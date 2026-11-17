@@ -13,8 +13,19 @@ app.use(express.json());
 // -------------------------------------------------------------
 // AQUÍ COLOCAS LA FUNCIÓN QUE SOLICITAS
 // -------------------------------------------------------------
+// Helper para conectar al almacén de Blobs (soporta tanto local como producción)
 function obtenerAlmacenMetricas() {
-  return getStore('funnel-metrics');
+  const options = {
+    name: 'funnel-metrics',
+    consistency: 'strong'
+  };
+
+  // Si estamos en entorno local con Netlify CLI (npx netlify dev)
+  if (process.env.NETLIFY_DEV === 'true' || process.env.NETLIFY_BLOBS_CONTEXT === 'dev') {
+    options.edgeURL = process.env.NETLIFY_BLOBS_EDGE_URL || 'http://127.0.0.1:27341';
+  }
+
+  return getStore(options);
 }
 
 // -------------------------------------------------------------
