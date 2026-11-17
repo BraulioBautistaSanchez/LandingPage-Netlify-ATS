@@ -10,22 +10,12 @@ const router = express.Router();
 
 app.use(express.json());
 
-// -------------------------------------------------------------
-// AQUÍ COLOCAS LA FUNCIÓN QUE SOLICITAS
-// -------------------------------------------------------------
-// Helper para conectar al almacén de Blobs (soporta tanto local como producción)
+// Helper para conectar a Netlify Blobs de forma compatible
 function obtenerAlmacenMetricas() {
-  const options = {
+  return getStore({
     name: 'funnel-metrics',
     consistency: 'strong'
-  };
-
-  // Si estamos en entorno local con Netlify CLI (npx netlify dev)
-  if (process.env.NETLIFY_DEV === 'true' || process.env.NETLIFY_BLOBS_CONTEXT === 'dev') {
-    options.edgeURL = process.env.NETLIFY_BLOBS_EDGE_URL || 'http://127.0.0.1:27341';
-  }
-
-  return getStore(options);
+  });
 }
 
 // -------------------------------------------------------------
@@ -55,7 +45,6 @@ router.post('/metrics', async (req, res) => {
       timestamp
     };
 
-    // Aquí es donde se utiliza la función
     const store = obtenerAlmacenMetricas();
     await store.setJSON(eventId, metricRecord);
 
@@ -74,7 +63,118 @@ router.post('/metrics', async (req, res) => {
   }
 });
 
-// Vincular router al prefijo /api
+// -------------------------------------------------------------
+// Endpoint 2: Consultar y resumir métricas + RETO 1 (GET /api/metrics)
+// -------------------------------------------------------------
+router.get('/metrics', async (req, res) => {
+  try {
+    const { step: filterStep, source: filterSource } = req.query;
+    const store = obtenerAlmacenMetricas();
+    const { blobs } = await store.list();
+
+    const eventos = await Promise.all(
+      blobs.slice(0, 50).map(async (blob) => {
+        return await store.get(blob.key, { type: 'json' });
+      })
+    );
+
+    let eventosValidos = eventos.filter(Boolean);
+
+    // Reto 1: Filtrado por Query Parameters
+    if (filterStep) {
+      eventosValidos = eventosValidos.filter(
+        (e) => e.step === String(filterStep).toLowerCase().trim()
+      );
+    }
+    if (filterSource) {
+      eventosValidos = eventosValidos.filter(
+        (e) => e.source === String(filterSource).toLowerCase().trim()
+      );
+    }
+
+    const summary = {
+      totalEvents: eventosValidos.length,
+      byStep: {},
+      bySource: {}
+    };
+
+    for (const evento of eventosValidos) {
+      summary.byStep[evento.step] = (summary.byStep[evento.step] || 0) + 1;
+      summary.bySource[evento.source] = (summary.bySource[evento.source] || 0) + 1;
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        summary,
+        recentEvents: eventosValidos
+      }
+    });
+  } catch (error) {
+    console.error('Error al consultar métricas:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Fallo interno al consultar métricas en Netlify Blobs.',
+      details: error.message
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// RETO 3: Exportación de Métricas a CSV (GET /api/metrics/export)
+// -------------------------------------------------------------
+router.get('/metrics/export', async (req, res) => {
+  try {
+    const { format } = req.query;
+    if (format !== 'csv') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Formato no soportado. Usa ?format=csv'
+      });
+    }
+
+    const store = obtenerAlmacenMetricas();
+    const { blobs } = await store.list();
+
+    const eventos = await Promise.all(
+      blobs.map(async (blob) => await store.get(blob.key, { type: 'json' }))
+    );
+
+    const eventosValidos = eventos.filter(Boolean);
+
+    const headers = ['id', 'step', 'source', 'sessionId', 'timestamp'];
+    const csvRows = [headers.join(',')];
+
+    for (const ev of eventosValidos) {
+      const row = [
+        ev.id,
+        ev.step,
+        ev.source,
+        ev.sessionId,
+        ev.timestamp
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="metricas_funnel.csv"');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    console.error('Error al exportar CSV:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error al generar la exportación en CSV.'
+    });
+  }
+});
+
+// Montar el router en /api
 app.use('/api', router);
 
-export const handler = serverless(app)
+// EXPORTACIÓN COMPATIBLE SERVERLESS
+const serverlessHandler = serverless(app);
+export const handler = async (event, context) => {
+  return await serverlessHandler(event, context);
+};
