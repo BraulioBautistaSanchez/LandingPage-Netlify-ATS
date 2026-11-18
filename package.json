@@ -12,9 +12,7 @@
     "express": "^4.21.0",
     "serverless-http": "^3.2.0"
   },
-  "devDependencies": {
-    "netlify-cli": "^17.37.0"
-  },
+  
   "description": "Link de la página https://afterthestormats.netlify.app",
   "main": "index.js",
   "repository": {
