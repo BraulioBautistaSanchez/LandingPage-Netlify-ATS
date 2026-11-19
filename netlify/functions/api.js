@@ -12,12 +12,21 @@ app.use(express.json());
 
 // Helper para conectar al almacén de Netlify Blobs
 function obtenerAlmacenMetricas() {
-  return getStore({
+  const config = {
     name: 'funnel-metrics',
     consistency: 'strong'
-  });
+  };
+
+  if (porcess.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN){
+    config.siteID = porcess.env.NETLIFY_SITE_ID;
+    config.token = process.env.NETLIFY_AUTH_TOKEN;
+  }
+   return getStore(config);
 }
 
+    
+    
+  
 // -------------------------------------------------------------
 // Endpoint 1: Registrar evento en el funnel (POST /api/metrics)
 // -------------------------------------------------------------
