@@ -1,6 +1,6 @@
 import express from 'express';
 import serverless from 'serverless-http';
-import { getStore } from '@netlify/blobs';
+import { getStore, connectLambda } from '@netlify/blobs';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,16 +17,14 @@ function obtenerAlmacenMetricas() {
     consistency: 'strong'
   };
 
-  if (porcess.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN){
-    config.siteID = porcess.env.NETLIFY_SITE_ID;
+  // Solo si defines credenciales manuales (útil fuera de Netlify)
+  if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
+    config.siteID = process.env.NETLIFY_SITE_ID;
     config.token = process.env.NETLIFY_AUTH_TOKEN;
   }
-   return getStore(config);
+  return getStore(config);
 }
 
-    
-    
-  
 // -------------------------------------------------------------
 // Endpoint 1: Registrar evento en el funnel (POST /api/metrics)
 // -------------------------------------------------------------
@@ -76,7 +74,7 @@ router.post('/metrics', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Endpoint 2: Consultar y filtrar métricas (GET /api/metrics) [Incluye Reto 1]
+// Endpoint 2: Consultar y filtrar métricas (GET /api/metrics) [Reto 1]
 // -------------------------------------------------------------
 router.get('/metrics', async (req, res) => {
   try {
@@ -94,7 +92,7 @@ router.get('/metrics', async (req, res) => {
     // Ordenar del más reciente al más antiguo
     todosLosEventos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // Aplicar filtros dinámicos si vienen en la URL (?step=... & ?source=...)
+    // Aplicar filtros dinámicos (?step=...&source=...)
     let eventosFiltrados = todosLosEventos;
     if (step) {
       const stepFiltro = String(step).toLowerCase().trim();
@@ -105,7 +103,7 @@ router.get('/metrics', async (req, res) => {
       eventosFiltrados = eventosFiltrados.filter((e) => e.source === sourceFiltro);
     }
 
-    // Calcular resumen analítico sobre los datos filtrados
+    // Resumen analítico sobre los datos filtrados
     const summary = {
       totalEvents: eventosFiltrados.length,
       byStep: {},
@@ -135,11 +133,11 @@ router.get('/metrics', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Endpoint Extra (Reto 3): Exportar métricas a CSV (GET /api/metrics/export)
+// Endpoint extra (Reto 3): Exportar a CSV (GET /api/metrics/export)
 // -------------------------------------------------------------
 router.get('/metrics/export', async (req, res) => {
   try {
-    const format = (req.query.format || 'csv').toLowerCase();
+    const format = String(req.query.format || 'csv').toLowerCase();
     if (format !== 'csv') {
       return res.status(400).json({
         status: 'error',
@@ -158,7 +156,7 @@ router.get('/metrics/export', async (req, res) => {
 
     eventos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // Construir CSV plano con los encabezados solicitados
+    // CSV plano con los encabezados solicitados
     const headers = ['id', 'step', 'source', 'sessionId', 'timestamp'];
     const rows = eventos.map((e) =>
       headers
@@ -181,6 +179,15 @@ router.get('/metrics/export', async (req, res) => {
   }
 });
 
+// Montar el router en ambos prefijos (por el redirect de Netlify)
 app.use('/api', router);
+app.use('/.netlify/functions/api', router);
 
-export const handler = serverless(app);
+const expressHandler = serverless(app);
+
+// Handler de Netlify Functions: conecta Blobs antes de ejecutar Express
+export const handler = async (event, context) => {
+  connectLambda(event);
+  return expressHandler(event, context);
+};
+
