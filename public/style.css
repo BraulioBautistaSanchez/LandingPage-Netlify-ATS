@@ -82,7 +82,6 @@ p {
   font-size: 1rem;
 }
 
-/* Header y Navegación */
 header {
   background: rgba(14, 15, 10, 0.85);
   backdrop-filter: blur(5px);
@@ -115,7 +114,7 @@ nav a:hover {
   border-bottom-color: var(--color-acento);
 }
 
-/* Secciones principales */
+
 main {
 
 }
@@ -271,12 +270,12 @@ footer {
   display: inline-block;
 }
 
-/* Reusamos cursor pointer para el botón */
+
 .boton-menu {
   cursor: pointer;
 }
 
-/* Caja de opciones adaptada al tema oscuro de ATS */
+
 .contenido-menu {
   display: none;
   position: absolute;
@@ -286,8 +285,7 @@ footer {
   border: 1px solid var(--color-borde);
   z-index: 100;
   margin-top: 10px;
-  
-  /* Centrar la caja respecto al botón */
+
   left: 50%;
   transform: translateX(-50%);
 }
@@ -297,13 +295,13 @@ footer {
   padding: 15px 20px;
   text-decoration: none;
   display: block;
-  font-family: var(--fuente-titulos); /* Usa la fuente Keania One */
+  font-family: var(--fuente-titulos);
   font-size: 1rem;
   letter-spacing: 0.05em;
   transition: background-color 0.3s, color 0.3s;
 }
 
-/* Efecto hover con el color de acento del juego */
+
 .contenido-menu a:hover {
   background-color: var(--color-acento);
   color: #ffffff;
@@ -311,4 +309,95 @@ footer {
 
 .mostrar {
   display: block;
+}
+
+html { scroll-padding-top: 5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  background: var(--color-acento);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  z-index: 200;
+  text-decoration: none;
+}
+.skip-link:focus { top: 1rem; }
+
+
+nav a[aria-current="true"] {
+  color: #fff;
+  border-bottom-color: var(--color-acento);
+}
+
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+.hero-actions .btn-cta { margin-top: 0; }
+
+.btn-cta--secundario {
+  background-color: transparent;
+  border: 2px solid var(--color-acento);
+}
+.btn-cta--secundario:hover { background-color: var(--color-acento); }
+
+#hero p { margin-top: 1rem; }
+
+h3 {
+  font-family: var(--fuente-titulos);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+section:not(#hero) { padding: 3rem 1rem; }
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+.card {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  padding: 1rem;
+}
+.placeholder-img--card { aspect-ratio: 3 / 4; margin-bottom: 1rem; }
+.card-rol { color: var(--color-texto-suave); margin-bottom: 0.5rem; }
+
+.news-list { list-style: none; display: grid; gap: 1.5rem; margin-bottom: 1.5rem; }
+.news-list li { border-left: 3px solid var(--color-acento); padding-left: 1rem; }
+.news-list time { color: var(--color-texto-suave); font-size: 0.9rem; }
+.news-demo { font-weight: 600; }
+
+
+.studio-desc { margin-bottom: 2rem; }
+.form-status { min-height: 1.5rem; color: var(--color-texto-suave); }
+button:disabled { opacity: 0.6; cursor: wait; }
+
+
+nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.contenido-menu a { min-height: 44px; }
+
+@media (min-width: 768px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767px) {
+  header { padding: 0.5rem 1rem; }
+  nav { gap: 0.25rem 1rem; }
+  nav a { font-size: 0.95rem; }
+  .hero-contenido { width: 100%; }
+  #hero { padding: 1.5rem 1rem; }
+  #hero h1 { letter-spacing: 0.05em; }
 }

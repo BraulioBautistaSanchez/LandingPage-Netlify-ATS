@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Descripción del proyecto para SEO">
+  <meta name="description" content="After The Storm (ATS) es una aventura narrativa sobre una de las operaciones más controversiales de la historia reciente de México. Pre-regístrate y prueba la DEMO.">
+  <meta name="theme-color" content="#0e0f0a">
   <title>After The Storm - ATS</title>
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Keania+One&family=Barlow:wght@400;600&display=swap" rel="stylesheet">  
-  
-  <!-- Enlace al archivo CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Keania+One&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
 
-  <!-- Canvas de Lluvia de Fondo -->
-  <canvas id="lluviaCanvas"></canvas>
+  <canvas id="lluviaCanvas" aria-hidden="true"></canvas>
 
   <header>
     <nav aria-label="Navegación principal">
@@ -29,98 +29,117 @@
     </nav>
   </header>
 
-  <main>
+  <main id="main">
     <section id="hero" aria-labelledby="hero-title">
       <div class="hero-contenido">
         <h1 id="hero-title">After The Storm</h1>
         <h2>Not every hero looks like one</h2>
 
+        <p>ATS (After The Storm) es una aventura narrativa en la cual conoceremos los hechos
+          de una de las operaciones más controversiales en la historia más reciente de México.</p>
+
+        <div class="hero-actions">
+          <a href="#preregistro" class="btn-cta"
+             data-step="bofu_preregister_click" data-location="hero">Pre-registro</a>
+
+          <!-- TODO: subir el APK a /downloads/ATS.apk (o cambiar el href a su enlace real) -->
+          <a href="downloads/ATS.apk" class="btn-cta btn-cta--secundario" download
+             data-step="bofu_apk_download" data-location="hero">Descargar APK</a>
+        </div>
+
+        <!-- La imagen va FUERA de los botones: un role="img" oculta a sus hijos a lectores de pantalla -->
         <div class="imagen-hero">
-          <div class="placeholder-img placeholder-img--banner"
-              role="img" aria-label="Imagen pendiente: arte principal del juego">
-            <a href="#studio" class="btn-cta"
-               onclick="registrarMetrica('bofu_interaction', { action: 'click_pre_registro', location: 'hero' })">
-              Pre-registro
-            </a>
+          <div class="placeholder-img placeholder-img--banner" role="img"
+               aria-label="Imagen pendiente: arte principal del juego">
+            Arte principal
           </div>
         </div>
-       
-        <p>Sinopsis: ATS (After The Storm) es una aventura narrativa en la cual conoceremos los hechos
-          de una de las operaciones más controversiales en la historia más reciente de México.</p>
       </div>
     </section>
 
     <section id="history" aria-labelledby="history-title">
       <h2 id="history-title">Historia</h2>
       <div class="imagen-seccion">
-        <div class="placeholder-img" role="img"
-            aria-label="Imagen pendiente: escena de la historia">
+        <div class="placeholder-img" role="img" aria-label="Imagen pendiente: escena de la historia">
           Escena 16:9
         </div>
       </div>
-      <p>En el año 2006 durante una operación encubierta contra grupos delictivos algo salió mal, pero fue encubierto y olvidado, 
+      <p>En el año 2006 durante una operación encubierta contra grupos delictivos algo salió mal, pero fue encubierto y olvidado,
         hasta la llegada de la nueva presidenta la cual comenzó a reabrir informes y carpetas de investigación y es en ese contexto cuando
         el gobierno reabre y cuestiona el informe de la operación "After The Storm".</p>
     </section>
 
     <section id="caracters" aria-labelledby="caracters-title">
       <h2 id="caracters-title">Personajes</h2>
-      <div class="imagen-seccion">
-        <div class="placeholder-img" role="img"
-             aria-label="Imagen pendiente: personajes principales">
-          Personajes 16:9
-        </div>
+      <div class="cards">
+        <article class="card">
+          <div class="placeholder-img placeholder-img--card" role="img"
+               aria-label="Imagen pendiente: retrato del personaje 1">Retrato</div>
+          <h3>Nombre del personaje 1</h3>
+          <p class="card-rol">Rol</p>
+          <p>Descripción corta del personaje.</p>
+        </article>
+        <article class="card">
+          <div class="placeholder-img placeholder-img--card" role="img"
+               aria-label="Imagen pendiente: retrato del personaje 2">Retrato</div>
+          <h3>Nombre del personaje 2</h3>
+          <p class="card-rol">Rol</p>
+          <p>Descripción corta del personaje.</p>
+        </article>
       </div>
-      <p>Próximamente conocerás a los protagonistas de esta historia.</p>
     </section>
 
     <section id="news" aria-labelledby="news-title">
       <h2 id="news-title">Noticias</h2>
-      <div class="imagen-seccion">
-        <div class="placeholder-img" role="img"
-             aria-label="Imagen pendiente: personajes principales">
-          Personajes 16:9
-        </div>
-      </div>
-      <p>ATS comenzó su etapa de producción y pronto tendremos una pequeña DEMO que probar.</p>
+      <ul class="news-list">
+        <li>
+          <!-- TODO: poner la fecha real -->
+          <time datetime="2026-11-23">23 nov 2026</time>
+          <h3>Comienza la producción de ATS</h3>
+          <p>ATS comenzó su etapa de producción y pronto tendremos una pequeña DEMO que probar.</p>
+        </li>
+      </ul>
+      <p class="news-demo">Próxima DEMO: muy pronto. Pre-regístrate para enterarte primero.</p>
     </section>
 
     <section id="studio" aria-labelledby="studio-title">
       <h2 id="studio-title">Black Studios</h2>
-      <form id="auth-form" onsubmit="handleRegister(event)">
+
+      <p class="studio-desc">Black Studios es el equipo de estudiantes de Desarrollo de Software y Videojuegos detrás de ATS.</p>
+
+      <h3 id="preregistro">Pre-registro</h3>
+      <form id="auth-form" aria-describedby="form-status">
         <div class="input-group">
           <label for="user-name">Nombre</label>
-          <input type="text" id="user-name" placeholder="Tu Nombre o Nickname" required />
+          <input type="text" id="user-name" name="name" autocomplete="nickname" placeholder="Tu Nombre o Nickname" required />
         </div>
 
         <div class="input-group">
           <label for="user-email">Correo electrónico</label>
-          <input type="email" id="user-email" placeholder="Correo electrónico" required />
+          <input type="email" id="user-email" name="email" autocomplete="email" placeholder="Correo electrónico" required />
         </div>
 
         <div class="input-group">
           <label for="user-social">Red social (opcional)</label>
-          <input type="text" id="user-social" placeholder="Usuario de Instagram / Twitter (opcional)" />
+          <input type="text" id="user-social" name="social" placeholder="Usuario de Instagram / Twitter (opcional)" />
         </div>
 
         <button type="submit" class="btn-start">Registrarse e Ingresar</button>
+        <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
       </form>
     </section>
   </main>
 
   <section id="enlaces-extra" style="text-align: center; margin: 4rem 0 2rem 0;">
     <div class="menu-desplegable">
-      <button onclick="mostrarOpciones()" class="btn-cta boton-menu">Otros juegos por si acaso ▼</button>
-      
+      <button type="button" id="btnOtros" class="btn-cta boton-menu"
+              aria-expanded="false" aria-controls="misOpciones">Otros juegos por si acaso ▼</button>
+
       <div id="misOpciones" class="contenido-menu">
         <a href="https://yolcatl.netlify.app/?src=aliado_afterthestorm"
-           onclick="registrarMetrica('bofu_cross_promo', { projectTarget: 'yolcatl' })">
-          Yolcatl
-        </a>
+           data-step="bofu_cross_promo" data-target="yolcatl">Yolcatl</a>
         <a href="https://mrghost65.github.io/Landing_Page_RRR/"
-           onclick="registrarMetrica('bofu_cross_promo', { projectTarget: 'rrr' })">
-          RRR
-        </a>
+           data-step="bofu_cross_promo" data-target="rrr">RRR</a>
       </div>
     </div>
   </section>
@@ -129,88 +148,7 @@
     <p>&copy; 2026 ATS. Todos los derechos reservados.</p>
   </footer>
 
-  <!-- Script original de tu landing page -->
-  <script src="script.js"></script>
-
-  <!-- Motor de Telemetría (Funnel + Reto 2: Sesión UUID y UTMs) -->
-  <script>
-    // 1. Gestor de Sesión: Genera o recupera UUID en sessionStorage
-    function obtenerSessionId() {
-      let sessionId = sessionStorage.getItem('funnel_session_id');
-      if (!sessionId) {
-        sessionId = typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : 'sess_' + Math.random().toString(36).substring(2, 11);
-        sessionStorage.setItem('funnel_session_id', sessionId);
-      }
-      return sessionId;
-    }
-
-    // 2. Extractor de parámetros UTM y canal de origen
-    function obtenerContextoUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const utmSource = params.get('utm_source');
-      const utmMedium = params.get('utm_medium');
-      const utmCampaign = params.get('utm_campaign');
-      const src = params.get('src');
-
-      const utms = {};
-      if (utmSource) utms.utm_source = utmSource;
-      if (utmMedium) utms.utm_medium = utmMedium;
-      if (utmCampaign) utms.utm_campaign = utmCampaign;
-
-      return {
-        source: src || utmSource || 'directo',
-        utms
-      };
-    }
-
-    // 3. Función principal asíncrona y no bloqueante
-    async function registrarMetrica(step, extraMetadata = {}, customSource = null) {
-      try {
-        const { source, utms } = obtenerContextoUrl();
-        const payload = {
-          step,
-          source: customSource || source,
-          sessionId: obtenerSessionId(),
-          metadata: {
-            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-            ...utms,
-            ...extraMetadata
-          }
-        };
-
-        await fetch('/api/metrics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          keepalive: true
-        });
-      } catch (err) {
-        console.warn('Telemetría no enviada:', err);
-      }
-    }
-
-    // 4. Disparos automáticos al cargar la página y al enviar formulario
-    window.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('src') || params.get('utm_source')) {
-        registrarMetrica('tofu_attraction');
-      }
-      registrarMetrica('mofu_landing');
-
-      const authForm = document.getElementById('auth-form');
-      if (authForm) {
-        authForm.addEventListener('submit', () => {
-          const hasSocial = Boolean(document.getElementById('user-social')?.value.trim());
-          registrarMetrica('feedback_submission', {
-            form: 'black_studios_register',
-            hasSocial
-          });
-        });
-      }
-    });
-  </script>
+  <!-- Un solo script (antes estaba cargado dos veces y la telemetría duplicada) -->
   <script src="script.js"></script>
 </body>
 </html>
