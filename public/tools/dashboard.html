@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS · Dashboard de métricas</title>
+  <style>
+    :root {
+      --fondo: #0e0f0a; --superficie: #1a1b14; --borde: #3a3c2e;
+      --texto: #d9d5c7; --suave: #9a9786; --acento: #9c3434; --acento2: #b84545; --ok: #6fae6f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: var(--fondo); color: var(--texto); padding: 1.5rem; line-height: 1.5; }
+    h1 { font-size: 1.5rem; letter-spacing: .05em; text-transform: uppercase; }
+    h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 2rem 0 .75rem; }
+    .barra { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; margin-top: 1rem; }
+    .campo { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--suave); }
+    input { background: var(--superficie); border: 1px solid var(--borde); color: var(--texto); padding: .5rem .75rem; min-width: 260px; }
+    button { background: var(--acento); color: #fff; border: 0; padding: .55rem 1rem; cursor: pointer; font-weight: 600; }
+    button:hover { background: var(--acento2); }
+    button.sec { background: transparent; border: 1px solid var(--borde); color: var(--texto); }
+    label.auto { display: flex; gap: .4rem; align-items: center; font-size: .85rem; color: var(--suave); }
+    #estado { margin-top: .75rem; font-size: .85rem; color: var(--suave); min-height: 1.3rem; }
+    #estado.error { color: #e07070; }
+
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
+    .kpi { background: var(--superficie); border: 1px solid var(--borde); padding: 1rem; }
+    .kpi .n { font-size: 1.9rem; font-weight: 700; }
+    .kpi .l { font-size: .8rem; color: var(--suave); }
+    .kpi .p { font-size: .85rem; color: var(--ok); }
+
+    .fila { display: grid; grid-template-columns: 180px 1fr 90px; gap: .75rem; align-items: center; margin-bottom: .5rem; font-size: .9rem; }
+    .pista { background: var(--superficie); border: 1px solid var(--borde); height: 22px; }
+    .relleno { background: var(--acento); height: 100%; transition: width .4s; }
+
+    .tablas { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+    th { color: var(--suave); font-weight: 600; }
+    td.meta { white-space: normal; max-width: 380px; color: var(--suave); font-family: monospace; font-size: .75rem; }
+  </style>
+</head>
+<body>
+  <h1>After The Storm · Métricas</h1>
+
+  <div class="barra">
+    <div class="campo">URL del sitio en Netlify
+      <input id="base" placeholder="https://tu-sitio.netlify.app" />
+    </div>
+    <div class="campo">Clave (solo si definieron METRICS_READ_KEY)
+      <input id="key" type="password" placeholder="opcional" />
+    </div>
+    <button id="btnCargar">Actualizar</button>
+    <button id="btnDemo" class="sec">Datos de ejemplo</button>
+    <button id="btnCsv" class="sec">Descargar CSV</button>
+    <label class="auto"><input type="checkbox" id="auto" style="min-width:0"> Auto cada 30 s</label>
+  </div>
+  <p id="estado"></p>
+
+  <h2>Resumen</h2>
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Embudo (% de sesiones que visitaron)</h2>
+  <div id="embudo"></div>
+
+  <div class="tablas">
+    <div>
+      <h2>Eventos por step</h2>
+      <div class="scroll"><table id="tSteps"></table></div>
+    </div>
+    <div>
+      <h2>Eventos por origen</h2>
+      <div class="scroll"><table id="tSources"></table></div>
+    </div>
+  </div>
+
+  <h2>Últimos eventos (máx. 50)</h2>
+  <div class="scroll"><table id="tRecientes"></table></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const safe = (fn) => { try { return fn(); } catch (_) { return null; } };
+    let temporizador = null;
+
+    // Escapa texto: los eventos los puede mandar cualquiera, nunca meter su contenido como HTML
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    const fmtTiempo = (s) => (s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`);
+
+    function estado(msg, error = false) {
+      $('estado').textContent = msg;
+      $('estado').className = error ? 'error' : '';
+    }
+
+    function urlApi(ruta = '/api/metrics', extra = '') {
+      const base = $('base').value.trim().replace(/\/$/, '');
+      const key = $('key').value.trim();
+      const params = [];
+      if (key) params.push('key=' + encodeURIComponent(key));
+      if (extra) params.push(extra);
+      return base + ruta + (params.length ? '?' + params.join('&') : '');
+    }
+
+    async function cargar() {
+      if (!$('base').value.trim()) return estado('Escribe la URL de tu sitio de Netlify.', true);
+      safe(() => localStorage.setItem('ats_dash_base', $('base').value.trim()));
+      estado('Cargando...');
+      try {
+        const res = await fetch(urlApi());
+        if (res.status === 401) throw new Error('Clave incorrecta o faltante (METRICS_READ_KEY).');
+        if (!res.ok) throw new Error('La API respondió con error ' + res.status + '.');
+        const json = await res.json();
+        pintar(json.data);
+        estado('Actualizado a las ' + new Date().toLocaleTimeString('es-MX'));
+      } catch (err) {
+        const cors = err instanceof TypeError ? ' Si dice "Failed to fetch": revisa la URL y que api.js tenga el cambio de CORS ya desplegado.' : '';
+        estado(err.message + cors, true);
+      }
+    }
+
+    function pintar(d) {
+      const s = d.summary, f = d.funnel;
+
+      const kpis = [
+        { n: f.sessions, l: 'Sesiones (visitas)' },
+        { n: s.uniqueVisitors, l: 'Visitantes únicos' },
+        { n: fmtTiempo(s.avgTimeOnPageSeconds), l: 'Tiempo promedio en la página' },
+        { n: f.preregisterClick.sessions, l: 'Clicks en Pre-registro', p: f.preregisterClick.pct + '%' },
+        { n: f.apkDownload.sessions, l: 'Clicks en Descargar APK', p: f.apkDownload.pct + '%' },
+        { n: f.formSubmitted.sessions, l: 'Formularios enviados', p: f.formSubmitted.pct + '%' }
+      ];
+      $('kpis').innerHTML = kpis.map((k) =>
+        `<div class="kpi"><div class="n">${esc(k.n)}</div><div class="l">${esc(k.l)}</div>${k.p ? `<div class="p">${esc(k.p)} de las visitas</div>` : ''}</div>`
+      ).join('');
+
+      const pasos = [
+        ['Visitas', f.sessions, 100],
+        ['Click Pre-registro', f.preregisterClick.sessions, f.preregisterClick.pct],
+        ['Click Descargar APK', f.apkDownload.sessions, f.apkDownload.pct],
+        ['Formulario enviado', f.formSubmitted.sessions, f.formSubmitted.pct]
+      ];
+      $('embudo').innerHTML = pasos.map(([l, n, p]) =>
+        `<div class="fila"><span>${esc(l)}</span><div class="pista"><div class="relleno" style="width:${Math.min(p, 100)}%"></div></div><span>${esc(n)} (${esc(p)}%)</span></div>`
+      ).join('');
+
+      const ordenar = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+      $('tSteps').innerHTML = '<tr><th>Step</th><th>Eventos</th><th>Sesiones únicas</th></tr>' +
+        ordenar(s.byStep).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v}</td><td>${s.uniqueSessionsByStep[k] ?? '-'}</td></tr>`).join('');
+      $('tSources').innerHTML = '<tr><th>Origen</th><th>Eventos</th></tr>' +
+        ordenar(s.bySource).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join('');
+
+      $('tRecientes').innerHTML = '<tr><th>Fecha</th><th>Step</th><th>Origen</th><th>Sesión</th><th>Metadata</th></tr>' +
+        d.recentEvents.map((e) =>
+          `<tr><td>${esc(new Date(e.timestamp).toLocaleString('es-MX'))}</td><td>${esc(e.step)}</td><td>${esc(e.source)}</td>` +
+          `<td>${esc(String(e.sessionId).slice(0, 8))}</td><td class="meta">${esc(JSON.stringify(e.metadata))}</td></tr>`
+        ).join('');
+    }
+
+    // Datos de ejemplo para ver cómo se ve sin depender de la API
+    function demo() {
+      const ahora = Date.now();
+      const steps = ['mofu_landing', 'bofu_preregister_click', 'bofu_apk_download', 'mofu_scroll_depth', 'mofu_time_on_page', 'feedback_submission'];
+      const recientes = Array.from({ length: 12 }, (_, i) => ({
+        timestamp: new Date(ahora - i * 90000).toISOString(),
+        step: steps[i % steps.length], source: ['directo', 'instagram', 'aliado_yolcatl'][i % 3],
+        sessionId: 'demo' + (1000 + i), metadata: { device: i % 2 ? 'mobile' : 'desktop', visitorId: 'v' + i }
+      }));
+      pintar({
+        summary: {
+          uniqueVisitors: 41, avgTimeOnPageSeconds: 87,
+          byStep: { mofu_landing: 52, mofu_scroll_depth: 120, mofu_time_on_page: 70, bofu_preregister_click: 21, bofu_apk_download: 9, feedback_submission: 6 },
+          bySource: { directo: 150, instagram: 80, aliado_yolcatl: 48 },
+          uniqueSessionsByStep: { mofu_landing: 52, mofu_scroll_depth: 38, mofu_time_on_page: 44, bofu_preregister_click: 19, bofu_apk_download: 9, feedback_submission: 6 }
+        },
+        funnel: {
+          sessions: 52,
+          preregisterClick: { sessions: 19, pct: 36.5 },
+          apkDownload: { sessions: 9, pct: 17.3 },
+          formSubmitted: { sessions: 6, pct: 11.5 }
+        },
+        recentEvents: recientes
+      });
+      estado('Mostrando datos de ejemplo (no son reales).');
+    }
+
+    $('btnCargar').addEventListener('click', cargar);
+    $('btnDemo').addEventListener('click', demo);
+    $('btnCsv').addEventListener('click', () => {
+      if (!$('base').value.trim()) return estado('Escribe la URL de tu sitio de Netlify.', true);
+      window.open(urlApi('/api/metrics/export', 'format=csv'), '_blank');
+    });
+    $('auto').addEventListener('change', (e) => {
+      clearInterval(temporizador);
+      if (e.target.checked) { cargar(); temporizador = setInterval(cargar, 30000); }
+    });
+
+    $('base').value = safe(() => localStorage.getItem('ats_dash_base')) || '';
+    if ($('base').value) cargar();
+  </script>
+</body>
+</html>
